@@ -3,20 +3,22 @@ from flask_restful import Resource, Api, reqparse, inputs
 from flask_jwt_extended import JWTManager, jwt_required
 from flask_pymongo import PyMongo
 from bson.json_util import dumps
-from pymongo import ASCENDING
+from pymongo import ASCENDING, TEXT
 from lib.MyLogger import *
-#from lib.user import Admin, AdminLogin
 
 
 app = Flask(__name__)
 app.secret_key = 'qawzsx13'
-app.config['MONGO_URI'] = "mongodb://127.0.0.1:27017/parkingdb"
+app.config['MONGO_URI'] = "mongodb://my_mongo_container:27017/parkingdb"
 app.config['MONGO_DBNAME'] = 'parkingdb'
 app.config['PROPAGATE_EXCEPTIONS'] = True
 
 mongo = PyMongo(app)
+if mongo.db.administrator.find({'username': 'admin'}).count() != 1:
+    mongo.db.administrator.insert_one(
+        {'username': 'admin', 'password': 'admin123'})
 mongo.db.parking.create_index([('slot_id', ASCENDING)], unique=True)
-mongo.db.administrator.create_index([('username', 1)], unique=True)
+mongo.db.administrator.create_index([('username', TEXT)], unique=True)
 api = Api(app)
 
 ALog = setup_custom_logger("applog")
@@ -42,7 +44,6 @@ class Slot(Resource):
                         required=True,
                         help='This value makes the slot available or not available')
 
-
     @jwt_required
     def get(self, id):
         print("id: %s, id type: %s" % (id, type(id)))
@@ -53,7 +54,7 @@ class Slot(Resource):
             return {'slots': slot}, 200
 
     @jwt_required
-    def post(self, id): # This creates a new slot
+    def post(self, id):  # This creates a new slot
         data = Slot.parser.parse_args()
         slot = {'slot_id': id, 'available': data['available']}
         print("slot:", slot)
@@ -76,7 +77,8 @@ class Slot(Resource):
         data = Slot.parser.parse_args()
         slot = {'slot_id': id, 'available': data['available']}
         if mongo.db.parking.find({'slot_id': id}).count() == 1:
-            mongo.db.parking.update_one({'slot_id': 1}, {'$set': {'available': data['available']}})
+            mongo.db.parking.update_one(
+                {'slot_id': 1}, {'$set': {'available': data['available']}})
         else:
             mongo.db.parking.insert_one(dict(slot))
         return slot
