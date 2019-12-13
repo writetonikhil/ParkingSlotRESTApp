@@ -1,0 +1,22 @@
+version: '3'
+services:
+    parking:
+        build: .
+        container_name: parking_flask
+        #command: python main.py
+        ports:
+            - "5000:5000"
+        volumes: 
+            - .:/parkvolume
+        links: 
+            - database
+    database:
+        image: mongo:latest
+        container_name: my_mongo_container
+        #environment: 
+        #    - MONGO_DATA_DIR=/home/mongo/data/db
+        #    - MONGO_INITDB_DATABASE=parkingdb
+        volumes: 
+            - ./data_mongodb:/home/mongo/data/db
+        command: 
+            mongod
